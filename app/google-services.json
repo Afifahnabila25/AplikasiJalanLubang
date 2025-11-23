@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "468707148498",
+    "project_id": "jalanlubangapp",
+    "storage_bucket": "jalanlubangapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:468707148498:android:8112a0287f8b7d04c5230b",
+        "android_client_info": {
+          "package_name": "com.example.aplikasijalanlubang"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3rZa54jWydLlGFzLokWeqrpvVqYIPgTA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
