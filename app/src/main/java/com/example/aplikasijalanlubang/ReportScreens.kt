@@ -41,6 +41,9 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 // --- DATA MODEL ---
 data class Report(
@@ -69,6 +72,7 @@ fun CreateReportScreen(
     var expanded by remember { mutableStateOf(false) }
     val categories = listOf("Lubang Besar", "Jalan Retak", "Aspal Mengelupas", "Banjir/Genangan", "Lainnya")
     var isLoadingLocation by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
@@ -184,13 +188,37 @@ fun CreateReportScreen(
                     if (category.isNotEmpty() && locationText.isNotEmpty()) {
                         val user = auth.currentUser
                         if (user != null) {
-                            val newId = db.collection("reports").document().id
-                            val report = Report(newId, user.uid, category, description, imageUri.toString(), locationText, SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault()).format(Date()))
-                            db.collection("reports").document(newId).set(report)
-                                .addOnSuccessListener { Toast.makeText(context, "Terkirim!", Toast.LENGTH_SHORT).show(); onReportSubmitted() }
+                            // 2. BUNGKUS DENGAN SCOPE.LAUNCH
+                            scope.launch {
+                                try {
+                                    val newId = db.collection("reports").document().id
+                                    val report = Report(
+                                        id = newId,
+                                        userId = user.uid,
+                                        category = category,
+                                        description = description,
+                                        imageUri = imageUri.toString(),
+                                        location = locationText,
+                                        date = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault()).format(Date())
+                                    )
+
+                                    // 3. GUNAKAN AWAIT UNTUK SIMPAN DATA
+                                    db.collection("reports").document(newId).set(report).await()
+
+                                    // Jika kode sampai sini, berarti sukses
+                                    Toast.makeText(context, "Terkirim!", Toast.LENGTH_SHORT).show()
+                                    onReportSubmitted()
+
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Gagal kirim: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
-                    } else Toast.makeText(context, "Lengkapi data!", Toast.LENGTH_SHORT).show()
-                }, modifier = Modifier.fillMaxWidth().height(50.dp)
+                    } else {
+                        Toast.makeText(context, "Lengkapi data!", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp)
             ) { Text("Kirim Laporan") }
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.example.aplikasijalanlubang.ui.theme.JalanLubangTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore // PENTING: Import Firestore
+import kotlinx.coroutines.tasks.await
 
 @Composable
 fun ProfileScreen(onLogout: () -> Unit) {
@@ -38,28 +39,28 @@ fun ProfileScreen(onLogout: () -> Unit) {
     // Ambil data saat layar dibuka
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
-            // 1. Ambil Data User
-            db.collection("users").document(user.uid).get()
-                .addOnSuccessListener { document ->
-                    if (document != null) {
-                        userName = document.getString("name") ?: "Tanpa Nama"
-                        userEmail = document.getString("email") ?: user.email ?: "-"
-                    }
-                }
+            try {
+                // 1. Ambil Data User (Pake await, kode jadi berurutan/synchronous)
+                val userDoc = db.collection("users").document(user.uid).get().await()
+                userName = userDoc.getString("name") ?: "Tanpa Nama"
+                userEmail = userDoc.getString("email") ?: user.email ?: "-"
 
-            // 2. Hitung Laporan User Ini
-            db.collection("reports")
-                .whereEqualTo("userId", user.uid)
-                .get()
-                .addOnSuccessListener { documents ->
-                    // Fix: Akses .size sebagai property, bukan function
-                    totalLaporan = documents.size()
+                // 2. Ambil Laporan (Pake await juga)
+                val reportsSnapshot = db.collection("reports")
+                    .whereEqualTo("userId", user.uid)
+                    .get()
+                    .await()
 
-                    // Fix: Akses .documents untuk mendapatkan List agar bisa di-filter
-                    laporanSelesai = documents.documents.filter {
-                        it.getString("status") == "Selesai"
-                    }.size
-                }
+                // Proses data
+                totalLaporan = reportsSnapshot.size()
+                laporanSelesai = reportsSnapshot.documents.filter {
+                    it.getString("status") == "Selesai"
+                }.size
+
+            } catch (e: Exception) {
+                // Handle error jika gagal ambil data (misal koneksi putus)
+                userName = "Gagal memuat"
+            }
         }
     }
 

@@ -37,7 +37,9 @@ import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
-
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @Composable
 fun LoginScreen(
@@ -49,6 +51,7 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -111,14 +114,19 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (email.isNotEmpty() && password.isNotEmpty()) {
-                    auth.signInWithEmailAndPassword(email, password)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                onLoginSuccess()
-                            } else {
-                                Toast.makeText(context, "Login Gagal: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
-                            }
+                    // MULAI COROUTINE
+                    scope.launch {
+                        try {
+                            // Proses login ditungguin pake .await()
+                            auth.signInWithEmailAndPassword(email, password).await()
+
+                            // Kalau tidak error, panggil sukses
+                            onLoginSuccess()
+                        } catch (e: Exception) {
+                            // Kalau error (password salah/user ga ada), masuk sini
+                            Toast.makeText(context, "Login Gagal: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
+                    }
                 } else {
                     Toast.makeText(context, "Isi email dan password", Toast.LENGTH_SHORT).show()
                 }
